@@ -455,7 +455,7 @@ void loop()
                 else    // or did we lose one?
                 {
                     scrollDown(lc, 0, special_chars[4]);
-                    scrollText(lc, String("  -"+String(api.channelStats.subscriberCount-subscriber_count)+" Subscriber!"));
+                    scrollText(lc, String("  -"+String(subscriber_count-api.channelStats.subscriberCount)+" Subscriber!"));
                 }
                 subscriber_count = api.channelStats.subscriberCount;    // save new subescriber count
                 showNumber(lc, subscriber_count);   // display the number
