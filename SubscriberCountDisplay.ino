@@ -9,9 +9,16 @@
 const int c_DISP_COUNT = 4;     // Number of diplays you have (Note: should be at least 4 and max 8)
 LedControl lc = LedControl(0,14,16,c_DISP_COUNT);   // create object of LedControl library
 
-
-char ssid[] = "<SSID>";             // your network SSID (name)
-char password[] = "<password>";     // your network key
+const char ssids[][20] = {
+    "<SSID 1>",                 // your 1st network SSID (name)
+    "<SSID 2>"                  // your 2nd network SSID (name) or more
+};
+const char passwords[][28] = {
+    "<password 1>",             // your 1st network key
+    "<password 2>"              // your 2nd network key or more
+};
+const uint8_t num_of_wifis = sizeof(ssids);
+const uint8_t connection_timeout = 10; // connection timeout for each network in seconds
 #define API_KEY "<API Key>"         // your google apps API Token
 #define CHANNEL_ID "<Channel ID>"   // makes up the url of channel
 
@@ -404,6 +411,8 @@ void setup()
     Serial.println();
     Serial.println(WiFi.macAddress());  // Print mac address of the esp
 
+    client.setInsecure(); // Need this otherwise youtube api requests wont work anymore
+    
     uint8_t i = 0;
     while (i < lc.getDeviceCount()) // Setup all matrices
     {
@@ -422,20 +431,89 @@ void setup()
     WiFi.disconnect();
     delay(100);
 
-    WiFi.begin(ssid, password); // Connect to wifi
-    // Show a little animation while connecting
-    i = 27;
-    while (WiFi.status() != WL_CONNECTED)
+    uint8_t selection = 0;
+    while(true)
     {
-        setChar(lc, 1, special_chars[i], false, 0);
-        ++i;
-        if(i>30)
+        bool timeout = false;
+        WiFi.begin(ssids[selection], passwords[selection]);
+        uint32_t start_time = millis();
+        i = 27;
+        while (!timeout)
         {
-            i=27;
+            setChar(lc, 1, special_chars[i], false, 0);
+            setChar(lc, 2, ascii_chars[16+selection], false, 0);
+            ++i;
+            if(i>30)
+            {
+                i=27;
+            }
+            delay(500);
+            timeout = ((WiFi.status() == WL_CONNECTED) || (millis() >= start_time+(uint32_t)connection_timeout*1000));
         }
-        delay(500);
+        if(WiFi.status() == WL_CONNECTED)
+        {
+            String connectionInfo = String("Connected to " + String(ssids[selection]));
+            scrollText(lc, connectionInfo);
+            Serial.println(connectionInfo);
+            break;
+        }
+        else
+        {
+            scrollText(lc, "Timeout!");
+            Serial.println("Timeout!");
+            WiFi.disconnect();
+        }
+        if(selection<num_of_wifis)
+        {
+            ++selection;
+        }
+        else
+        {
+            selection = 0;
+        }
     }
-    scrollText(lc, "Connected");    // Setup done, show it.
+//    api._debug = true; // use for debugging purposes
+    updateChannelStatistics();
+}
+
+void updateChannelStatistics() {
+    Serial.println("Update statistics");
+    if(api.getChannelStatistics(CHANNEL_ID))
+    {
+        Serial.println("Received statistics");
+        if(subscriber_count != api.channelStats.subscriberCount)
+        {
+            if(subscriber_count < api.channelStats.subscriberCount)
+            {
+                scrollDown(lc, 0, special_chars[4]);
+                //scrollDown(lc, 1, special_chars[4]);
+                //scrollDown(lc, 2, special_chars[4]);
+                scrollText(lc, String("  +"+String(api.channelStats.subscriberCount-subscriber_count)+" Subscriber!"));
+            }
+            else
+            {
+                scrollDown(lc, 0, special_chars[4]);
+                //scrollDown(lc, 1, special_chars[4]);
+                //scrollDown(lc, 2, special_chars[4]);
+                scrollText(lc, String("  -"+String(api.channelStats.subscriberCount-subscriber_count)+" Subscriber!"));
+            }
+            subscriber_count = api.channelStats.subscriberCount;
+            showNumber(lc, subscriber_count);
+        }
+        //    Serial.println("---------Stats---------");
+        //    Serial.print("Subscriber Count: ");
+        //    Serial.println(api.channelStats.subscriberCount);
+        //    Serial.print("View Count: ");
+        //    Serial.println(api.channelStats.viewCount);
+        //    Serial.print("Comment Count: ");
+        //    Serial.println(api.channelStats.commentCount);
+        //    Serial.print("Video Count: ");
+        //    Serial.println(api.channelStats.videoCount);
+        ////     Probably not needed :)s
+        //    Serial.print("hiddenSubscriberCount: ");
+        //    Serial.println(api.channelStats.hiddenSubscriberCount);
+        //    Serial.println("------------------------");
+    }
 }
 
 // Main Loop
@@ -443,37 +521,7 @@ void loop()
 {
     if (millis() - api_lasttime > c_API_MTBS)   // Only get channel statistics every c_API_MTBS seconds
     {
-        if(api.getChannelStatistics(CHANNEL_ID))    // If we got the statistics data
-        {
-            if(subscriber_count != api.channelStats.subscriberCount)    // Check if subscriber count changed
-            {
-                if(subscriber_count < api.channelStats.subscriberCount) // Did we get a subescriber ?
-                {
-                    scrollDown(lc, 0, special_chars[4]);
-                    scrollText(lc, String("  +"+String(api.channelStats.subscriberCount-subscriber_count)+" Subscriber!"));
-                }
-                else    // or did we lose one?
-                {
-                    scrollDown(lc, 0, special_chars[4]);
-                    scrollText(lc, String("  -"+String(subscriber_count-api.channelStats.subscriberCount)+" Subscriber!"));
-                }
-                subscriber_count = api.channelStats.subscriberCount;    // save new subescriber count
-                showNumber(lc, subscriber_count);   // display the number
-            }
-            //Serial.println("---------Stats---------");
-            //Serial.print("Subscriber Count: ");
-            //Serial.println(api.channelStats.subscriberCount);
-            //Serial.print("View Count: ");
-            //Serial.println(api.channelStats.viewCount);
-            //Serial.print("Comment Count: ");
-            //Serial.println(api.channelStats.commentCount);
-            //Serial.print("Video Count: ");
-            //Serial.println(api.channelStats.videoCount);
-            // Probably not needed :)
-            //Serial.print("hiddenSubscriberCount: ");
-            //Serial.println(api.channelStats.hiddenSubscriberCount);
-            //Serial.println("------------------------");
-        }
+        updateChannelStatistics();
         api_lasttime = millis(); // store last time we tried to get the statistics data
     }
 }
