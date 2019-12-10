@@ -495,7 +495,7 @@ void updateChannelStatistics() {
                 scrollDown(lc, 0, special_chars[4]);
                 //scrollDown(lc, 1, special_chars[4]);
                 //scrollDown(lc, 2, special_chars[4]);
-                scrollText(lc, String("  -"+String(api.channelStats.subscriberCount-subscriber_count)+" Subscriber!"));
+                scrollText(lc, String("  -"+String(subscriber_count-api.channelStats.subscriberCount)+" Subscriber!"));
             }
             subscriber_count = api.channelStats.subscriberCount;
             showNumber(lc, subscriber_count);
