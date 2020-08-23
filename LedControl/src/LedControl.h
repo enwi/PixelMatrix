@@ -39,6 +39,8 @@
 #include <WProgram.h>
 #endif
 
+#include <SPI.h>
+
 /*
  * Segments to be switched on for characters and digits on
  * 7-Segment Displays
