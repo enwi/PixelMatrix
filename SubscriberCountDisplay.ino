@@ -8,7 +8,7 @@
 #include "characters.h" // My own definition of ASCII characters and special stuff
 
 const int c_DISP_COUNT = 4; // Number of diplays you have (Note: should be at least 4 and max 8)
-LedControl lc = LedControl(0, 14, 16, c_DISP_COUNT); // create object of LedControl library
+LedControl lc = LedControl(16, c_DISP_COUNT); // create object of LedControl library
 
 const char ssids[][20] = {
     "<SSID 1>", // your 1st network SSID (name)
